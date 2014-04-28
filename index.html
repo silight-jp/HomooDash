@@ -2,7 +2,7 @@
 <html>
 	<head>
 		<meta charset="UTF-8">
-		<meta name="viewport" content="width=320px,user-scalable=no">
+		<meta name="viewport" content="width=320,user-scalable=no">
 		<title>ホモォダッシュ</title>
 		<style>
 			body {
@@ -23,20 +23,29 @@
 	</head>
 	<body>
 	<script type="text/javascript">
+		function setClickOrTouchListener(interactiveObject, listener) {
+			if(document.ontouchstart){
+				interactiveObject.touchstart = listener;
+			} else {
+				interactiveObject.mousedown = listener;
+			}
+		}
+		
 		var fps = 30;
 		
 		var ua = window.navigator.userAgent.toLowerCase();
 		
 		// IE は WebGL を使わず Canvas で描画
-//		var renderer = (ua.indexOf("msie") != -1 || ua.indexOf('trident/7') != -1)
-//		             ? new PIXI.CanvasRenderer(320, 320) : new PIXI.autoDetectRenderer(320, 320);
+		var renderer = (ua.indexOf("msie") != -1 || ua.indexOf('trident/7') != -1)
+		             ? new PIXI.CanvasRenderer(320, 320) : new PIXI.autoDetectRenderer(320, 320);
 //		var renderer = new PIXI.autoDetectRenderer(320, 320);
-		var renderer = new PIXI.CanvasRenderer(320, 320);
+//		var renderer = new PIXI.CanvasRenderer(320, 320);
 		document.body.appendChild(renderer.view);
 
-		var stage = new PIXI.Stage(0x000000);
+		var stage = new PIXI.Stage(0xFFFFFF);
 		stage.setInteractive(true);
-		stage.mousedown = function (interactionData) {
+		
+		stage.touchstart = stage.mousedown = function (interactionData) {
 			interactionData.originalEvent.preventDefault();
 			interactionData.originalEvent.stopPropagation();
 		};
@@ -72,12 +81,14 @@
 		startButton.addChild(startMessage);
 		startButton.setInteractive(true);
 		startButton.hitArea = new PIXI.Rectangle(-80, -20, 160, 40);
-		startButton.mousedown = function (interactionData) {
-			init();
-			interactionData.originalEvent.preventDefault();
-			interactionData.originalEvent.stopPropagation();
-		};
-		startButton.touchstart = startButton.mousedown;
+		setClickOrTouchListener(
+			startButton,
+			function (interactionData) {
+				init();
+				interactionData.originalEvent.preventDefault();
+				interactionData.originalEvent.stopPropagation();
+			}
+		);
 		
 		var gameoverMessage = new PIXI.Text("ゲームオーバー", { font: "32px helvetica" });
 		gameoverMessage.anchor.x = 0.5;
@@ -123,12 +134,14 @@
 		retryButton.setInteractive(true);
 		retryButton.hitArea = new PIXI.Rectangle(-80, -20, 160, 40);
 		retryButton.visible = false;
-		retryButton.mousedown = function (interactionData) {
-			init();
-			interactionData.originalEvent.preventDefault();
-			interactionData.originalEvent.stopPropagation();
-		};
-		retryButton.touchstart = retryButton.mousedown;
+		setClickOrTouchListener(
+			retryButton,
+			function (interactionData) {
+				init();
+				interactionData.originalEvent.preventDefault();
+				interactionData.originalEvent.stopPropagation();
+			}
+		);
 		
 		var scoreMessage = new PIXI.Text("Score: 0", { font: "24px helvetica" });
 		scoreMessage.anchor.x = 0.5;
@@ -159,15 +172,17 @@
 		leftPanel.alpha = 0.5;
 		leftPanel.hitArea = new PIXI.Rectangle(0, 0, 40, 360);
 		leftPanel.setInteractive(true);
-		leftPanel.mousedown = function(interactionData) {
-			if (isPlaying && !noHit) {
-				leftPanel.alpha = 0.8;
-				leftCount++;
+		setClickOrTouchListener(
+			leftPanel,
+			function(interactionData) {
+				if (isPlaying && !noHit) {
+					leftPanel.alpha = 0.8;
+					leftCount++;
+				}
+				interactionData.originalEvent.preventDefault();
+				interactionData.originalEvent.stopPropagation();
 			}
-			interactionData.originalEvent.preventDefault();
-			interactionData.originalEvent.stopPropagation();
-		};
-		leftPanel.touchstart = leftPanel.mousedown;
+		);
 		
 		var rightPanel = new PIXI.Graphics();
 		rightPanel.beginFill(0x000000);
@@ -183,15 +198,17 @@
 		rightPanel.alpha = 0.5;
 		rightPanel.hitArea = new PIXI.Rectangle(0, 0, 40, 360);
 		rightPanel.setInteractive(true);
-		rightPanel.mousedown = function(interactionData) {
-			if (isPlaying && !noHit) {
-				rightPanel.alpha = 0.8;
-				rightCount++;
+		setClickOrTouchListener(
+			rightPanel,
+			function(interactionData) {
+				if (isPlaying && !noHit) {
+					rightPanel.alpha = 0.8;
+					rightCount++;
+				}
+				interactionData.originalEvent.preventDefault();
+				interactionData.originalEvent.stopPropagation();
 			}
-			interactionData.originalEvent.preventDefault();
-			interactionData.originalEvent.stopPropagation();
-		};
-		rightPanel.touchstart = rightPanel.mousedown;
+		);
 		
 		window.addEventListener(
 			"keydown",

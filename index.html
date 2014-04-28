@@ -34,7 +34,7 @@
 		document.body.appendChild(renderer.view);
 
 		var stage = new PIXI.Stage(0x000000);
-		stage.setInteractive(true);
+		//stage.setInteractive(true);
 		//stage.mousedown = function (interactionData) { init(); };
 		
 		var ground = new PIXI.DisplayObjectContainer();
@@ -68,7 +68,12 @@
 		startButton.addChild(startMessage);
 		startButton.setInteractive(true);
 		startButton.hitArea = new PIXI.Rectangle(-80, -20, 160, 40);
-		startButton.mousedown = function (interactionData) { init(); };
+		startButton.mousedown = function (interactionData) {
+			init();
+			interactionData.originalEvent.preventDefault();
+			interactionData.originalEvent.stopPropagation();
+		};
+		startButton.touchstart = startButton.mousedown;
 		
 		var gameoverMessage = new PIXI.Text("ゲームオーバー", { font: "32px helvetica" });
 		gameoverMessage.anchor.x = 0.5;
@@ -92,8 +97,8 @@
 		tweetButton.y = 160;
 		tweetButton.addChild(tweetButtonGraphics);
 		tweetButton.addChild(tweetMessage);
-		tweetButton.setInteractive(true);
-		tweetButton.hitArea = new PIXI.Rectangle(-80, -20, 160, 40);
+		//tweetButton.setInteractive(true);
+		//tweetButton.hitArea = new PIXI.Rectangle(-80, -20, 160, 40);
 		tweetButton.visible = false;
 		
 		var retryButtonGraphics = new PIXI.Graphics();
@@ -113,8 +118,13 @@
 		retryButton.addChild(retryMessage);
 		retryButton.setInteractive(true);
 		retryButton.hitArea = new PIXI.Rectangle(-80, -20, 160, 40);
-		retryButton.mousedown = function (interactionData) { init(); };
 		retryButton.visible = false;
+		retryButton.mousedown = function (interactionData) {
+			init();
+			interactionData.originalEvent.preventDefault();
+			interactionData.originalEvent.stopPropagation();
+		};
+		retryButton.touchstart = retryButton.mousedown;
 		
 		var scoreMessage = new PIXI.Text("Score: 0", { font: "24px helvetica" });
 		scoreMessage.anchor.x = 0.5;
@@ -150,7 +160,10 @@
 				leftPanel.alpha = 0.8;
 				leftCount++;
 			}
+			interactionData.originalEvent.preventDefault();
+			interactionData.originalEvent.stopPropagation();
 		};
+		leftPanel.touchstart = leftPanel.mousedown;
 		
 		var rightPanel = new PIXI.Graphics();
 		rightPanel.beginFill(0x000000);
@@ -171,7 +184,10 @@
 				rightPanel.alpha = 0.8;
 				rightCount++;
 			}
+			interactionData.originalEvent.preventDefault();
+			interactionData.originalEvent.stopPropagation();
 		};
+		rightPanel.touchstart = rightPanel.mousedown;
 		
 		window.addEventListener(
 			"keydown",

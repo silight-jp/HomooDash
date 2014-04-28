@@ -28,14 +28,18 @@
 		var ua = window.navigator.userAgent.toLowerCase();
 		
 		// IE は WebGL を使わず Canvas で描画
-		var renderer = (ua.indexOf("msie") != -1 || ua.indexOf('trident/7') != -1)
-		             ? new PIXI.CanvasRenderer(320, 320) : new PIXI.autoDetectRenderer(320, 320);
+//		var renderer = (ua.indexOf("msie") != -1 || ua.indexOf('trident/7') != -1)
+//		             ? new PIXI.CanvasRenderer(320, 320) : new PIXI.autoDetectRenderer(320, 320);
 //		var renderer = new PIXI.autoDetectRenderer(320, 320);
+		var renderer = new PIXI.CanvasRenderer(320, 320);
 		document.body.appendChild(renderer.view);
 
 		var stage = new PIXI.Stage(0x000000);
-		//stage.setInteractive(true);
-		//stage.mousedown = function (interactionData) { init(); };
+		stage.setInteractive(true);
+		stage.mousedown = function (interactionData) {
+			interactionData.originalEvent.preventDefault();
+			interactionData.originalEvent.stopPropagation();
+		};
 		
 		var ground = new PIXI.DisplayObjectContainer();
 		

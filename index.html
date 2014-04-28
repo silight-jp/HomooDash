@@ -24,7 +24,7 @@
 	<body>
 	<script type="text/javascript">
 		function setClickOrTouchListener(interactiveObject, listener) {
-			if(document.ontouchstart){
+			if('ontouchstart' in document){
 				interactiveObject.touchstart = listener;
 			} else {
 				interactiveObject.mousedown = listener;
@@ -65,7 +65,7 @@
 		title.y = 160;
 		
 		var statrtButtonGraphics = new PIXI.Graphics();
-		statrtButtonGraphics.beginFill(0xFFFFFF);
+		statrtButtonGraphics.beginFill(0x808080);
 		statrtButtonGraphics.drawRect(-80, -20, 160, 40);
 		statrtButtonGraphics.endFill();
 		statrtButtonGraphics.alpha = 0.5;

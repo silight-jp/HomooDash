@@ -198,6 +198,20 @@
 					}
 				);
 				
+				window.addEventListener(
+					"keydown",
+					function(event) {
+						if (event.keyCode == 37) { // Left
+							moveLeft();
+						}
+						if (event.keyCode == 39) { // Right
+							moveRight();
+						}
+						return false;
+					},
+					false
+				);
+				
 				createjs.Ticker.setFPS(30);
 				createjs.Ticker.timingMode = createjs.Ticker.RAF_SYNCHED;
 				createjs.Ticker.on("tick", render);

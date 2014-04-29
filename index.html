@@ -19,442 +19,373 @@
 				display: none;
 			}
 		</style>
-		<script src="pixi.dev.js"></script>
+		<script src="preloadjs-0.4.1.min.js"></script>
+		<script src="easeljs-0.7.1.min.js"></script>
 	</head>
 	<body>
-	<script type="text/javascript">
-		function setClickOrTouchListener(interactiveObject, listener) {
-			if('ontouchstart' in document){
-				interactiveObject.touchstart = listener;
-			} else {
-				interactiveObject.mousedown = listener;
+		<canvas id="myCanvas" width="320" height="320">HTML5対応ブラウザでプレイできます。</canvas>
+		<script type="text/javascript">
+			var fps = 30;
+			
+			var moveDeltaList = [ 2, 6, 12, 12, 6, 2 ];
+			var vy = 10;
+			
+			var stage;
+			var loader;
+			
+			var playerImage;
+			var grassImage;
+			var blockImage;
+			
+			var player;
+			var grass;
+			var blocks;
+			var title;
+			var startButton;
+			var tweetButton;
+			var retryButton;
+			var rightPane;
+			var leftPane;
+			var gameoverMessage;
+			var scoreMessage;
+			
+			var startTime = new Date().getTime();
+			var frameCount = 0;
+			
+			var px = 0;
+			
+			var taskList = new Array();
+			
+			var tryCount = 0;
+			var score = 0;
+			
+			function init() {
+				stage = new createjs.Stage("myCanvas");
+				createjs.Touch.enable(stage);
+				stage.clear();
+				
+				loader = new createjs.LoadQueue(false);
+				loader.setMaxConnections(4);
+				loader.loadManifest([
+					{ id: "player", src: "player.png" },
+					{ id: "grass",  src: "grass.png" },
+					{ id: "block",  src: "block.png" }
+				]);
+				loader.on("complete", start);
+				loader.load();
 			}
-		}
-		
-		var fps = 30;
-		
-		var ua = window.navigator.userAgent.toLowerCase();
-		
-		// IE は WebGL を使わず Canvas で描画
-		var renderer = (ua.indexOf("msie") != -1 || ua.indexOf('trident/7') != -1)
-		             ? new PIXI.CanvasRenderer(320, 320) : new PIXI.autoDetectRenderer(320, 320);
-//		var renderer = new PIXI.autoDetectRenderer(320, 320);
-//		var renderer = new PIXI.CanvasRenderer(320, 320);
-		document.body.appendChild(renderer.view);
-
-		var stage = new PIXI.Stage(0xFFFFFF);
-		stage.setInteractive(true);
-		
-		stage.touchstart = stage.mousedown = function (interactionData) {
-			interactionData.originalEvent.preventDefault();
-			interactionData.originalEvent.stopPropagation();
-		};
-		
-		var ground = new PIXI.DisplayObjectContainer();
-		
-		var grass = new PIXI.TilingSprite(PIXI.Texture.fromImage("grass.png"), 320, 320);
-		ground.addChild(grass);
-		
-		var holeLayer = new PIXI.DisplayObjectContainer();
-		ground.addChild(holeLayer);
-		
-		var title = new PIXI.Text("ホモォダッシュ", { font: "32px helvetica" });
-		title.anchor.x = 0.5;
-		title.anchor.y = 0.5;
-		title.x = 160;
-		title.y = 160;
-		
-		var statrtButtonGraphics = new PIXI.Graphics();
-		statrtButtonGraphics.beginFill(0x808080);
-		statrtButtonGraphics.drawRect(-80, -20, 160, 40);
-		statrtButtonGraphics.endFill();
-		statrtButtonGraphics.alpha = 0.5;
-		
-		var startMessage = new PIXI.Text("ゲームを始める", { font: "24px helvetica" });
-		startMessage.anchor.x = 0.5;
-		startMessage.anchor.y = 0.5;
-		
-		var startButton = new PIXI.DisplayObjectContainer();
-		startButton.x = 160;
-		startButton.y = 240;
-		startButton.addChild(statrtButtonGraphics);
-		startButton.addChild(startMessage);
-		startButton.setInteractive(true);
-		startButton.hitArea = new PIXI.Rectangle(-80, -20, 160, 40);
-		setClickOrTouchListener(
-			startButton,
-			function (interactionData) {
-				init();
-				interactionData.originalEvent.preventDefault();
-				interactionData.originalEvent.stopPropagation();
-			}
-		);
-		
-		var gameoverMessage = new PIXI.Text("ゲームオーバー", { font: "32px helvetica" });
-		gameoverMessage.anchor.x = 0.5;
-		gameoverMessage.anchor.y = 0.5;
-		gameoverMessage.x = 160;
-		gameoverMessage.y = 80;
-		gameoverMessage.visible = false;
-		
-		var tweetButtonGraphics = new PIXI.Graphics();
-		tweetButtonGraphics.beginFill(0x99CCFF);
-		tweetButtonGraphics.drawRect(-80, -20, 160, 40);
-		tweetButtonGraphics.endFill();
-		tweetButtonGraphics.alpha = 0.5;
-		
-		var tweetMessage = new PIXI.Text("ツイート", { font: "24px helvetica" });
-		tweetMessage.anchor.x = 0.5;
-		tweetMessage.anchor.y = 0.5;
-		
-		var tweetButton = new PIXI.DisplayObjectContainer();
-		tweetButton.x = 160;
-		tweetButton.y = 160;
-		tweetButton.addChild(tweetButtonGraphics);
-		tweetButton.addChild(tweetMessage);
-		//tweetButton.setInteractive(true);
-		//tweetButton.hitArea = new PIXI.Rectangle(-80, -20, 160, 40);
-		tweetButton.visible = false;
-		
-		var retryButtonGraphics = new PIXI.Graphics();
-		retryButtonGraphics.beginFill(0xFFFFFF);
-		retryButtonGraphics.drawRect(-80, -20, 160, 40);
-		retryButtonGraphics.endFill();
-		retryButtonGraphics.alpha = 0.5;
-		
-		var retryMessage = new PIXI.Text("リトライ", { font: "24px helvetica" });
-		retryMessage.anchor.x = 0.5;
-		retryMessage.anchor.y = 0.5;
-		
-		var retryButton = new PIXI.DisplayObjectContainer();
-		retryButton.x = 160;
-		retryButton.y = 220;
-		retryButton.addChild(retryButtonGraphics);
-		retryButton.addChild(retryMessage);
-		retryButton.setInteractive(true);
-		retryButton.hitArea = new PIXI.Rectangle(-80, -20, 160, 40);
-		retryButton.visible = false;
-		setClickOrTouchListener(
-			retryButton,
-			function (interactionData) {
-				init();
-				interactionData.originalEvent.preventDefault();
-				interactionData.originalEvent.stopPropagation();
-			}
-		);
-		
-		var scoreMessage = new PIXI.Text("Score: 0", { font: "24px helvetica" });
-		scoreMessage.anchor.x = 0.5;
-		scoreMessage.anchor.y = 0.5;
-		scoreMessage.x = 160;
-		scoreMessage.y = 280;
-		scoreMessage.visible = false;
-		
-		var player = new PIXI.Sprite(PIXI.Texture.fromImage("player.png"), 20, 20);//new PIXI.DisplayObjectContainer();
-		player.anchor.x = 0.5;
-		player.anchor.y = 0.5;
-		player.x = 160;
-		player.y = 80;
-		
-		var blockTexture = PIXI.Texture.fromImage("block.png");
-		
-		var leftPanel = new PIXI.Graphics();
-		leftPanel.beginFill(0x000000);
-		leftPanel.drawRect(0, 0, 40, 360);
-		leftPanel.endFill();
-		leftPanel.beginFill(0xFFFFFF);
-		leftPanel.moveTo(10, 160);
-		leftPanel.lineTo(30, 140);
-		leftPanel.lineTo(30, 180);
-		leftPanel.endFill();
-		leftPanel.position.x = 0;
-		leftPanel.position.y = 0;
-		leftPanel.alpha = 0.5;
-		leftPanel.hitArea = new PIXI.Rectangle(0, 0, 40, 360);
-		leftPanel.setInteractive(true);
-		setClickOrTouchListener(
-			leftPanel,
-			function(interactionData) {
-				if (isPlaying && !noHit) {
-					leftPanel.alpha = 0.8;
-					leftCount++;
+			
+			function start(event) {
+				loader.off("complete", start);
+				
+				playerImage = loader.getResult("player");
+				grassImage  = loader.getResult("grass");
+				blockImage  = loader.getResult("block");
+				
+				player = new createjs.Bitmap(playerImage);
+				player.regX = 10;
+				player.regY = 10;
+				player.x = 160;
+				player.y = 80;
+				
+				grass = new createjs.Shape();
+				grass.graphics.beginBitmapFill(grassImage).drawRect(0, 0, 320, 320 + 250).endFill();
+				
+				blocks = new createjs.Container();
+				
+				title = new createjs.Text("ホモォダッシュ", "32px helvetica");
+				title.textAlign = "center";
+				title.textBaseline = "middle";
+				title.x = 160;
+				title.y = 160;
+				
+				gameoverMessage = new createjs.Text("ゲームオーバー", "32px helvetica");
+				gameoverMessage.textAlign = "center";
+				gameoverMessage.textBaseline = "middle";
+				gameoverMessage.x = 160;
+				gameoverMessage.y = 80;
+				gameoverMessage.visible = false;
+				
+				scoreMessage = new createjs.Text("Score: 0", "24px helvetica");
+				scoreMessage.textAlign = "center";
+				scoreMessage.textBaseline = "middle";
+				scoreMessage.x = 160;
+				scoreMessage.y = 280;
+				scoreMessage.visible = false;
+				
+				function createButton(labelText, textSize, backgroundColor, width, height) {
+					var background = new createjs.Shape();
+					background .graphics.beginFill(backgroundColor).drawRect(0, 0, width, height).endFill();
+					background .alpha = 0.5;
+					
+					var label = new createjs.Text(labelText, textSize + "px helvetica");
+					label.textAlign = "center";
+					label.textBaseline = "middle";
+					label.x = width / 2;
+					label.y = height / 2;
+					
+					var button = new createjs.Container();
+					button.addChild(background);
+					button.addChild(label);
+					
+					return button;
 				}
-				interactionData.originalEvent.preventDefault();
-				interactionData.originalEvent.stopPropagation();
-			}
-		);
-		
-		var rightPanel = new PIXI.Graphics();
-		rightPanel.beginFill(0x000000);
-		rightPanel.drawRect(0, 0, 40, 360);
-		rightPanel.endFill();
-		rightPanel.beginFill(0xFFFFFF);
-		rightPanel.moveTo(30, 160);
-		rightPanel.lineTo(10, 140);
-		rightPanel.lineTo(10, 180);
-		rightPanel.endFill();
-		rightPanel.position.x = 280;
-		rightPanel.position.y = 0;
-		rightPanel.alpha = 0.5;
-		rightPanel.hitArea = new PIXI.Rectangle(0, 0, 40, 360);
-		rightPanel.setInteractive(true);
-		setClickOrTouchListener(
-			rightPanel,
-			function(interactionData) {
-				if (isPlaying && !noHit) {
-					rightPanel.alpha = 0.8;
-					rightCount++;
-				}
-				interactionData.originalEvent.preventDefault();
-				interactionData.originalEvent.stopPropagation();
-			}
-		);
-		
-		window.addEventListener(
-			"keydown",
-			function(event) {
-				if (isPlaying && !noHit) {
-					switch (event.keyCode) {
-						case 37: // Left
-							leftPanel.alpha = 0.8;
-							leftCount++;
-							break;
-						case 39: // Right
-							rightPanel.alpha = 0.8;
-							rightCount++;
-							break;
+				
+				startButton = createButton("ゲームを始める", 24, "#FFFFFF", 160, 40);
+				startButton.regX = 80;
+				startButton.regY = 20;
+				startButton.x = 160;
+				startButton.y = 240;
+				startButton.on("mousedown", gameInit);
+				
+				tweetButton = createButton("ツイート", 24, "#99CCFF", 160, 40);
+				tweetButton.regX = 80;
+				tweetButton.regY = 20;
+				tweetButton.x = 160;
+				tweetButton.y = 160;
+				tweetButton.visible = false;
+				
+				retryButton = createButton("リトライ", 24, "#FFFFFF", 160, 40);
+				retryButton.regX = 80;
+				retryButton.regY = 20;
+				retryButton.x = 160;
+				retryButton.y = 220;
+				retryButton.visible = false;
+				retryButton.on("mousedown", gameInit);
+				
+				leftPane = new createjs.Shape();
+				leftPane.graphics.beginFill("#000000").drawRect(0, 0, 40, 360).endFill();
+				leftPane.graphics.beginFill("#FFFFFF").moveTo(10, 160).lineTo(30, 140).lineTo(30, 180).endFill();
+				leftPane.x = 0;
+				leftPane.y = 0;
+				leftPane.alpha = 0.5;
+				leftPane.on("mousedown", moveLeft);
+				
+				rightPane = new createjs.Shape();
+				rightPane.graphics.beginFill("#000000").drawRect(0, 0, 40, 360).endFill();
+				rightPane.graphics.beginFill("#FFFFFF").moveTo(30, 160).lineTo(10, 140).lineTo(10, 180).endFill();
+				rightPane.x = 280;
+				rightPane.y = 0;
+				rightPane.alpha = 0.5;
+				rightPane.on("mousedown", moveRight);
+				
+				stage.addChild(grass);
+				stage.addChild(blocks);
+				stage.addChild(player);
+				stage.addChild(title);
+				stage.addChild(gameoverMessage);
+				stage.addChild(scoreMessage);
+				stage.addChild(startButton);
+				stage.addChild(tweetButton);
+				stage.addChild(retryButton);
+				stage.addChild(leftPane);
+				stage.addChild(rightPane);
+				
+				taskList.push(
+					function () {
+						var offset = (frameCount * vy) % 250;
+						grass.y = -offset;
+						blocks.y = -frameCount * vy;
+						return true;
 					}
-				}
-				return false;
-			},
-			false
-		);
-		
-		stage.addChild(ground);
-		stage.addChild(title);
-		stage.addChild(startButton);
-		stage.addChild(player);
-		stage.addChild(rightPanel);
-		stage.addChild(leftPanel);
-		stage.addChild(scoreMessage);
-		stage.addChild(gameoverMessage);
-		stage.addChild(tweetButton);
-		stage.addChild(retryButton);
-		
-//		var fpsCount = 0;
-		
-		var startTime = new Date().getTime();
-		var frameCount = 0;
-		
-		var isPlaying = false;
-		
-		var vx = 0;
-		var vy = 10;
-		
-		var x = 0;
-		var y = 0;
-		
-		var px = 0;
-		var py = 0;
-		
-		var rightCount = 0;
-		var leftCount = 0;
-		
-		requestAnimFrame(animate);
-		
-		var prevHole = parseInt(Math.random() * 5);
-		
-		var noHit = false;
-		
-		function animate() {
-			var time = new Date().getTime();
-			var expectedFrameCount = (time - startTime) * fps / 1000;
-			//if (expectedFrameCount >= frameCount) {
+				);
+				
+				createjs.Ticker.setFPS(30);
+				createjs.Ticker.timingMode = createjs.Ticker.RAF_SYNCHED;
+				createjs.Ticker.on("tick", render);
+			}
+			
+			function render() {
+				var time = new Date().getTime();
+				var expectedFrameCount = (time - startTime) * fps / 1000;
 				while (expectedFrameCount >= frameCount) {
 					update();
 					frameCount++;
-//					if (fpsCount % fps == 0) {
-//						text.text = fpsCount.toString();
-//						text.updateText();
-//						fpsCount = 0;
-//					}
 				}
-				//fpsCount++;
-				render();
-			//}
-			
-			requestAnimFrame(animate);
-		}
-		
-		var taskList = new Array();
-		
-		var level = 0;
-		var score = 0;
-		var tryCount = 0;
-		var blockCount = 0;
-		
-		function update() {
-			while (leftCount > 0) {
-				leftCount--;
 				
-				if (px > -2) {
-					px--;
-					taskList.push(
-						(function() {
-							var i = 0;
-							return function() {
-								x -= [ 2, 6, 12, 12, 6, 2 ][i];
-								i++;
-								return i < 6;
-							}
-						})()
-					);
-				}
-			}
-			if (leftPanel.alpha > 0.5) {
-				leftPanel.alpha -= 0.05;
-				if (leftPanel.alpha < 0.5) {
-					leftPanel.alpha = 0.5;
-				}
-			}
-			while (rightCount > 0) {
-				rightCount--;
-				
-				if (px < 2) {
-					px++;
-					taskList.push(
-						(function() {
-							var i = 0;
-							return function() {
-								x += [ 2, 6, 12, 12, 6, 2 ][i];
-								i++;
-								return i < 6;
-							}
-						})()
-					);
-				}
-			}
-			if (rightPanel.alpha > 0.5) {
-				rightPanel.alpha -= 0.05;
-				if (rightPanel.alpha < 0.5) {
-					rightPanel.alpha = 0.5;
-				}
+				stage.update();
 			}
 			
-			var children = holeLayer.children;
-			var array = new Array();
-			
-			for (var i = 0; i < children.length; i++) {
-				if (children[i].y < -holeLayer.y - 20)
-				{
-					array.push(children[i]);
-				}
-			}
-			array.forEach(function(element) {
-				holeLayer.removeChild(element);
-				if (!noHit && isPlaying && element.tryCount == tryCount) {
-					score++;
-					scoreMessage.text = "Score: " + score;
-					scoreMessage.updateText();
-				}
-			});
-			
-			if (isPlaying && !noHit && blockCount <= 0) {
-				var random = (prevHole + 1 + parseInt(4 * Math.random())) % 5;
-				prevHole = random;
-				var hole = new PIXI.Sprite(blockTexture, 20, 20);//new PIXI.Graphics();
-//				hole.beginFill(0x112200);
-//				hole.drawCircle(0, 0, 10);
-//				hole.endFill();
-				hole.position.x = random * 40 + 80;
-				hole.position.y = y + 330;
-				hole.anchor.x = 0.5;
-				hole.anchor.y = 0.5;
-				hole.tryCount = tryCount;
-				holeLayer.addChild(hole);
-				
-				blockCount = 10 / (score / 100 + 1);
-			} else {
-				blockCount--;
+			function update() {
+				var tempTaskList = taskList;
+				taskList = new Array();
+				taskList = tempTaskList.filter(function(element) { return element(); }).concat(taskList);
 			}
 			
-			taskList = taskList.filter(function(element) {
-				return element();
-			});
-			
-			x += vx;
-			y += vy;
-			
-			//grass.tilePosition.x = -x;
-			grass.tilePosition.y = -y;
-			//holeLayer.x = -x;
-			holeLayer.y = -y;
-			player.x = x + 160;
-			
-			if (!noHit) {
-				var children = holeLayer.children;
-				children.forEach(function(element) {
-					if (
-						Math.pow(holeLayer.x + element.x - player.x, 2) + Math.pow(holeLayer.y + element.y - player.y, 2) < 20 * 20
-					) {
-						player.y -= vy;
-					}
-				});
-			
-				if (player.y < 0 && isPlaying) {
-					gameover();
-				}
-			}
-		}
-		
-		function render() {
-			renderer.render(stage);
-		}
-		
-		function init() {
-			if (!isPlaying) {
-				tryCount++;
+			function gameInit() {
 				title.visible = false;
 				startButton.visible = false;
+				scoreMessage.visible = true;
 				gameoverMessage.visible = false;
 				tweetButton.visible = false;
-				var a = document.getElementById("custom-tweet-button");
-				a.style.display = "none";
+				setVisibleOfTweetButton(false);
 				retryButton.visible = false;
-				isPlaying = true;
-				player.y = -20;
-				x = 0;
+				score = 0;
+				updateScoreMessage();
 				px = 0;
 				player.x = 160;
-				noHit = true;
-				score = 0;
-				scoreMessage.text = "Score: 0";
-				scoreMessage.updateText();
-				scoreMessage.visible = true;
+				player.y = -20;
+				tryCount++;
 				taskList.push(
 					function() {
 						player.y += 4;
 						if (player.y >= 80) {
 							player.y = 80;
-							noHit = false;
+							addBlock(parseInt(5 * Math.random()));
+							startHitCheck();
 							return false;
 						}
 						return true;
 					}
 				);
 			}
-		}
-		
-		function gameover() {
-			gameoverMessage.visible = true;
-			tweetButton.visible = true;
-			var url = encodeURI("https://twitter.com/intent/tweet?text=") + encodeURIComponent("ホモォダッシュ！あなたのスコアは" + score + "でした。http://silight-jp.github.io/HomooDash/ #ホモォダッシュ");
-			var a = document.getElementById("custom-tweet-button");
-			a.href = url;
-			a.style.display = "block";
-			retryButton.visible = true;
-			isPlaying = false;
-		}
+			
+			function startHitCheck() {
+				var count = tryCount;
+				taskList.push(
+					function() {
+						var children = blocks.children;
+						
+						children = children.filter(
+							function(element) {
+								if (element.y + blocks.y + 10 < 0) {
+									if (element.tryCount == tryCount) {
+										score++;
+										updateScoreMessage();
+									}
+									return false;
+								}
+								return true;
+							}
+						);
+						
+						children.forEach(
+							function(element) {
+								if (Math.pow(blocks.x + element.x - player.x, 2) + Math.pow(blocks.y + element.y - player.y, 2) < 20 * 20) {
+									player.y -= vy;
+								}
+							}
+						);
+						
+						if (player.y < 0) {
+							gameover();
+						}
+						
+						blocks.children = children;
+						
+						return count == tryCount;
+					}
+				);
+			}
+			
+			function moveLeft() {
+				var i = 0;
+				if (px > -2) {
+					px--;
+					taskList.push(
+						function() {
+							player.x -= moveDeltaList[i];
+							i++;
+							return i < moveDeltaList.length;
+						}
+					);
+				}
+				
+				var alpha = 1;
+				taskList.push(
+					function() {
+						if (leftPane.alpha > alpha) {
+							return false;
+						}
+						alpha -= 0.05;
+						var end = alpha < 0.5;
+						leftPane.alpha = end ? 0.5 : alpha;
+						return !end;
+					}
+				);
+			}
+			
+			function moveRight() {
+				var i = 0;
+				if (px < 2) {
+					px++;
+					taskList.push(
+						function() {
+							player.x += moveDeltaList[i];
+							i++;
+							return i < moveDeltaList.length;
+						}
+					);
+				}
+				
+				var alpha = 1;
+				taskList.push(
+					function() {
+						if (rightPane.alpha > alpha) {
+							return false;
+						}
+						alpha -= 0.05;
+						var end = alpha < 0.5;
+						rightPane.alpha = end ? 0.5 : alpha;
+						return !end;
+					}
+				);
+			}
+			
+			function addBlock(prev) {
+				var random = (prev + 1 + parseInt(4 * Math.random())) % 5;
+				var blockCount = 10 / (score / 100 + 1);
+				var count = tryCount;
+				
+				var block = new createjs.Bitmap(blockImage);
+				block.regX = 10;
+				block.regY = 10;
+				alert(random);
+				block.x = random * 40 + 80;
+				block.y = 330 - blocks.y;
+				block.tryCount = tryCount;
+				blocks.addChild(block);
+				
+				taskList.push(
+					function() {
+						if (count != tryCount) {
+							return false;
+						}
+						blockCount--;
+						if (blockCount <= 0) {
+							addBlock(random);
+							return false;
+						} else {
+							return true;
+						}
+					}
+				);
+			}
+			
+			function updateScoreMessage() {
+				scoreMessage.text = "Score: " + score;
+			}
+			
+			function setVisibleOfTweetButton(visible) {
+				var a = document.getElementById("custom-tweet-button");
+				if (visible) {
+					var url = encodeURI("https://twitter.com/intent/tweet?text=") + encodeURIComponent("ホモォダッシュ！あなたのスコアは" + score + "でした。http://silight-jp.github.io/HomooDash/ #ホモォダッシュ");
+					a.href = url;
+					a.style.display = "block";
+				} else {
+					a.style.display = "none";
+				}
+			}
+			
+			function gameover() {
+				gameoverMessage.visible = true;
+				tweetButton.visible = true;
+				setVisibleOfTweetButton(true);
+				retryButton.visible = true;
+				tryCount++;
+			}
+			
+			window.addEventListener("load", init, false);
 	</script>
 	<a id="custom-tweet-button" target="_blank"></a>
 	</body>

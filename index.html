@@ -59,6 +59,14 @@
 			var tryCount = 0;
 			var score = 0;
 			
+			function touchWrap(listener) {
+				return !('ontouchstart' in document) ? listener : function(event) {
+					if (event.nativeEvent.type == "touchstart") {
+						listener();
+					}
+				}
+			}
+			
 			function init() {
 				stage = new createjs.Stage("myCanvas");
 				createjs.Touch.enable(stage);
@@ -136,7 +144,7 @@
 				startButton.regY = 20;
 				startButton.x = 160;
 				startButton.y = 240;
-				startButton.on("mousedown", gameInit);
+				startButton.on("mousedown", touchWrap(gameInit));
 				
 				tweetButton = createButton("ツイート", 24, "#99CCFF", 160, 40);
 				tweetButton.regX = 80;
@@ -151,7 +159,7 @@
 				retryButton.x = 160;
 				retryButton.y = 220;
 				retryButton.visible = false;
-				retryButton.on("mousedown", gameInit);
+				retryButton.on("mousedown", touchWrap(gameInit));
 				
 				leftPane = new createjs.Shape();
 				leftPane.graphics.beginFill("#000000").drawRect(0, 0, 40, 360).endFill();
@@ -159,7 +167,7 @@
 				leftPane.x = 0;
 				leftPane.y = 0;
 				leftPane.alpha = 0.5;
-				leftPane.on("mousedown", moveLeft);
+				leftPane.on("mousedown", touchWrap(moveLeft));
 				
 				rightPane = new createjs.Shape();
 				rightPane.graphics.beginFill("#000000").drawRect(0, 0, 40, 360).endFill();
@@ -167,7 +175,7 @@
 				rightPane.x = 280;
 				rightPane.y = 0;
 				rightPane.alpha = 0.5;
-				rightPane.on("mousedown", moveRight);
+				rightPane.on("mousedown", touchWrap(moveRight));
 				
 				stage.addChild(grass);
 				stage.addChild(blocks);

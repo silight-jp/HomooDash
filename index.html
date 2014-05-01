@@ -62,7 +62,7 @@
 			function init() {
 				stage = new createjs.Stage("myCanvas");
 				
-				if (createjs.Touch.isSupport()) {
+				if (createjs.Touch.isSupported()) {
 					stage.enableDOMEvents(false);
 					createjs.Touch.enable(stage);
 				}
